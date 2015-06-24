@@ -1,6 +1,6 @@
 # GV
 
-Ruby bindings for libgvc (Graphviz).
+Ruby bindings for libgvc (Graphviz) using FFI.
 
 ## Installation
 
@@ -33,7 +33,9 @@ graph.render 'png'
 # or to a file
 graph.write 'result.png'
 ```
-Result ![resilt](/spec/render.png)
+
+#### Result 
+![resilt](/spec/render.png)
   
 ### Load existing graph from `.dot` file:
 ```ruby
