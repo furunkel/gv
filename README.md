@@ -1,6 +1,6 @@
 # GV
 
-TODO: Write a gem description
+Ruby bindings for libgvc (Graphviz).
 
 ## Installation
 
@@ -20,7 +20,30 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+### Create new graph:
+```ruby
+require 'gv'
+
+graph = GV::Graph.open 'g'
+graph.edge 'e', graph.node('A'), graph.node('B', shape: 'polygon')
+
+# render to string
+graph.render 'png'
+
+# or to a file
+graph.write 'result.png'
+```
+Result ![resilt](/spec/render.png)
+  
+### Load existing graph from `.dot` file:
+```ruby
+require 'gv'
+
+graph = GV::Graph.load File.open('g.dot')
+
+# render graph
+graph.render
+```
 
 ## Contributing
 
