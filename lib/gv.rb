@@ -199,13 +199,13 @@ module GV
       @ptr = ptr
     end
 
-    def write(filename, layout = 'dot', format = 'png')
+    def write(filename, format = 'png', layout = 'dot')
       FFI.gvLayout(@@gvc, ptr, layout.to_s)
       FFI.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
       FFI.gvFreeLayout(@@gvc, ptr)
     end
 
-    def render(layout = 'dot', format = 'png')
+    def render(format = 'png', layout = 'dot')
       FFI.gvLayout(@@gvc, ptr, layout.to_s)
 
       data_ptr = ::FFI::MemoryPointer.new(:pointer, 1)
