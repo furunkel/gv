@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.version       = GV::VERSION
   spec.authors       = ["furunkel"]
   spec.email         = ["julian@linux4you.it"]
-  spec.summary       = %q{Graphviz for Ruby, using libgvc directly via FFI}
+  spec.summary       = %q{Graphviz for Ruby, using libgvc via FFI}
   spec.homepage      = "https://github.com/furunkel/gv"
   spec.license       = "MIT"
 
