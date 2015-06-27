@@ -54,21 +54,21 @@ describe Graph do
     end
   end
 
-  describe :graph do
+  describe :sub_graph do
     before do
       @graph = Graph.open 'test'
     end
 
-    it "creates a new subgraph" do
-      @graph.graph('test').must_be_kind_of SubGraph
+    it "creates a new sub graph" do
+      @graph.sub_graph('test').must_be_kind_of SubGraph
     end
 
     it "sets given attributes" do
-      @graph.graph('test', color: 'green')[:color].must_equal 'green'
+      @graph.sub_graph('test', color: 'green')[:color].must_equal 'green'
     end
 
     it "takes a block" do
-      graph = @graph.graph('test') do |g|
+      graph = @graph.sub_graph('test') do |g|
         g[:color] = 'green'
       end
       graph[:color].must_equal 'green'
@@ -106,7 +106,7 @@ describe Graph do
   describe :render do
     it "renders the graph to a string" do
       graph = Graph.open 'test'
-      graph.edge 'e', graph.node('A'), graph.node('B', shape: 'polygon')
+      graph.edge 'e', graph.node('A'), graph.node('B', shape: 'polygon', label: graph.html('<b>bold</b>'))
       data = graph.render
 
       graph = nil

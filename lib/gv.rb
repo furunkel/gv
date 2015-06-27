@@ -51,8 +51,8 @@ module GV
     attach_function :agget, [:pointer, :string], :string
 
     attach_function :agsafeset, [:pointer, :string, :string, :string], :pointer
-    attach_function :agstrdup_html, [:pointer, :string], :string
-    attach_function :agstrfree, [:pointer, :string], :int
+    attach_function :agstrdup_html, [AGraph.by_ref, :string], :pointer
+    attach_function :agstrfree, [AGraph.by_ref, :pointer], :int
 
     attach_function :agisdirected, [AGraph.by_ref], :int
     attach_function :agisstrict, [AGraph.by_ref], :int
@@ -62,6 +62,14 @@ module GV
     @@gvc = FFI.gvContext()
 
     attr_reader :graph
+
+    def html(string)
+      ptr = FFI.agstrdup_html(graph.ptr, string)
+      string = ptr.read_string
+      FFI.agstrfree graph.ptr, ptr
+
+      string
+    end
 
     def hash
       ptr.hash
@@ -127,7 +135,7 @@ module GV
       component Edge, [name, tail, head], attrs
     end
 
-    def graph(name, attrs = {})
+    def sub_graph(name, attrs = {})
       graph = component SubGraph, [name], attrs
       yield graph if block_given?
 
@@ -197,6 +205,10 @@ module GV
 
     def initialize(ptr)
       @ptr = ptr
+    end
+
+    def graph
+      self
     end
 
     def write(filename, format = 'png', layout = 'dot')
