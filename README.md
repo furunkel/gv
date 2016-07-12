@@ -35,7 +35,7 @@ graph.write 'result.png'
 ```
 
 #### Result 
-![resilt](/spec/render.png)
+![Result](https://github.com/furunkel/gv/blob/master/spec/render.png)
   
 ### Load existing graph from `.dot` file:
 ```ruby
