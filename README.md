@@ -1,4 +1,4 @@
-# GV
+# GV [![Build Status](https://travis-ci.org/furunkel/gv.svg?branch=master)](https://travis-ci.org/furunkel/gv)
 
 Ruby bindings for libgvc (Graphviz) using FFI.
 
