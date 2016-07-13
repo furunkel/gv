@@ -1,7 +1,7 @@
 before_install:
   - sudo add-apt-repository ppa:gviz-adm/graphviz-dev -y
   - sudo apt-get -qq update
-  - sudo apt-get install -y libgraphviz-dev graphviz
+  - sudo apt-get install -y libgraphviz-dev graphviz libgraphviz4
 language: ruby
 rvm:
   - 2.3.1
