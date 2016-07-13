@@ -3,45 +3,34 @@ require 'ffi'
 
 module GV
 
-  module FFI
-    extend ::FFI::Library
+  module LibCGraph
+    extend FFI::Library
 
-    ffi_lib 'gvc', 'cgraph'
+    ffi_lib 'cgraph'
 
-    class AGraph < ::FFI::ManagedStruct
-      # dummy layout, only ever used by reference
-      layout :_1, :int,
-             :_2, :int
-
+    class AGraph < FFI::AutoPointer
       def self.release(ptr)
-        FFI.agclose(ptr) unless ptr.null?
+        LibCGraph.agclose(ptr) unless ptr.null?
       end
     end
 
-    typedef :pointer, :gvc
+
     typedef :pointer, :ag_node
     typedef :pointer, :ag_edge
 
-    attach_function :gvContext, [], :pointer
-    attach_function :gvFreeLayout, [:gvc, AGraph.by_ref], :int
-    attach_function :gvLayout, [:gvc, AGraph.by_ref, :string], :int
 
-    attach_function :gvRenderFilename, [:gvc, AGraph.by_ref, :string, :string], :int
-    attach_function :gvRenderData, [:gvc, AGraph.by_ref, :string, :pointer, :pointer], :int
-    attach_function :gvFreeRenderData, [:pointer], :void
-
-    attach_function :agmemread, [:string], AGraph.by_ref
-    attach_function :agopen, [:string, :long, :pointer], AGraph.by_ref
-    attach_function :agclose, [AGraph.by_ref], :int
+    attach_function :agmemread, [:string], AGraph
+    attach_function :agopen, [:string, :long, :pointer], AGraph
+    attach_function :agclose, [AGraph], :int
 
     attach_variable :Agundirected, :long
     attach_variable :Agstrictundirected, :long
     attach_variable :Agdirected, :long
     attach_variable :Agstrictdirected, :long
 
-    attach_function :agnode, [AGraph.by_ref, :string, :int], :ag_node
-    attach_function :agedge, [AGraph.by_ref, :ag_node, :ag_node, :string, :int], :ag_edge
-    attach_function :agsubg, [AGraph.by_ref, :string, :int], :pointer
+    attach_function :agnode, [AGraph, :string, :int], :ag_node
+    attach_function :agedge, [AGraph, :ag_node, :ag_node, :string, :int], :ag_edge
+    attach_function :agsubg, [AGraph, :string, :int], :pointer
 
     attach_function :agnameof, [:pointer], :string
     attach_function :agraphof, [:pointer], :pointer
@@ -51,17 +40,33 @@ module GV
     attach_function :agget, [:pointer, :string], :string
 
     attach_function :agsafeset, [:pointer, :string, :string, :string], :pointer
-    attach_function :agstrdup_html, [AGraph.by_ref, :string], :pointer
-    attach_function :agstrfree, [AGraph.by_ref, :pointer], :int
+    attach_function :agstrdup_html, [AGraph, :string], :pointer
+    attach_function :agstrfree, [AGraph, :pointer], :int
 
-    attach_function :agisdirected, [AGraph.by_ref], :int
-    attach_function :agisstrict, [AGraph.by_ref], :int
+    attach_function :agisdirected, [AGraph], :int
+    attach_function :agisstrict, [AGraph], :int
   end
-  private_constant :FFI
+  private_constant :LibCGraph
+
+  module LibGVC
+    extend FFI::Library
+    ffi_lib 'gvc'
+
+    typedef :pointer, :gvc
+
+    attach_function :gvContext, [], :pointer
+    attach_function :gvFreeLayout, [:gvc, LibCGraph::AGraph], :int
+    attach_function :gvLayout, [:gvc, LibCGraph::AGraph, :string], :int
+
+    attach_function :gvRenderFilename, [:gvc, LibCGraph::AGraph, :string, :string], :int
+    attach_function :gvRenderData, [:gvc, LibCGraph::AGraph, :string, :pointer, :pointer], :int
+    attach_function :gvFreeRenderData, [:pointer], :void
+  end
+  private_constant :LibGVC
 
   class Component
     # @!visibility private
-    @@gvc = FFI.gvContext()
+    @@gvc = LibGVC.gvContext()
 
     # @return [Graph, SubGraph] the graph this component belongs to
     attr_reader :graph
@@ -70,9 +75,9 @@ module GV
     # @param string [String] the HTML to parse
     # @return [Object] a HTML label
     def html(string)
-      ptr = FFI.agstrdup_html(graph.ptr, string)
+      ptr = LibCGraph.agstrdup_html(graph.ptr, string)
       string = ptr.read_string
-      FFI.agstrfree graph.ptr, ptr
+      LibCGraph.agstrfree graph.ptr, ptr
 
       string
     end
@@ -89,7 +94,7 @@ module GV
 
     # @return [String] the component's name
     def name
-      FFI.agnameof ptr
+      LibCGraph.agnameof ptr
     end
 
     # Sets an attribute
@@ -97,7 +102,7 @@ module GV
     # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
     # @param value [Object] attribute value
     def []=(attr, value)
-      FFI.agsafeset(ptr, attr.to_s, value.to_s, "")
+      LibCGraph.agsafeset(ptr, attr.to_s, value.to_s, "")
     end
 
     # Retrieves the value of an attribute
@@ -105,7 +110,7 @@ module GV
     # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
     # @return [Object] the attribute value
     def [](attr)
-      FFI.agget(ptr, attr.to_s)
+      LibCGraph.agget(ptr, attr.to_s)
     end
 
     protected
@@ -117,7 +122,7 @@ module GV
       @graph = graph
       case name_or_ptr
       when String
-        @ptr = FFI.agnode(graph.ptr, name_or_ptr, 1)
+        @ptr = LibCGraph.agnode(graph.ptr, name_or_ptr, 1)
       else
         @ptr = name_or_ptr
       end
@@ -128,17 +133,17 @@ module GV
     def initialize(graph, name, tail, head)
       @graph = graph
 
-      @ptr = FFI.agedge(graph.ptr, tail.ptr, head.ptr, name, 1)
+      @ptr = LibCGraph.agedge(graph.ptr, tail.ptr, head.ptr, name, 1)
     end
 
     # @return [Node] the head node of the edge
     def head
-      Node.new @graph, FFI.aghead(ptr)
+      Node.new @graph, LibCGraph.aghead(ptr)
     end
 
     # @return [Node] the tail node of the edge
     def tail
-      Node.new @graph, FFI.agtail(ptr)
+      Node.new @graph, LibCGraph.agtail(ptr)
     end
   end
 
@@ -181,12 +186,12 @@ module GV
 
     # @return whether this graph is directed
     def directed?
-      FFI.agisdirected(ptr) == 1
+      LibCGraph.agisdirected(ptr) == 1
     end
 
     # @return whether this graph is strict
     def strict?
-      FFI.agisstrict(ptr) == 1
+      LibCGraph.agisstrict(ptr) == 1
     end
 
     private
@@ -205,7 +210,7 @@ module GV
   class SubGraph < BaseGraph
     def initialize(graph, name)
       @graph = graph
-      @ptr = FFI.agsubg(graph.ptr, name, 1)
+      @ptr = LibCGraph.agsubg(graph.ptr, name, 1)
     end
   end
 
@@ -222,15 +227,15 @@ module GV
       # @return [Graph] the newly created graph
       def open(name, type = :directed, strictness = :normal)
         ag_type = case [type, strictness]
-                    when [:directed, :normal] then FFI.Agdirected
-                    when [:undirected, :normal] then FFI.Agundirected
-                    when [:directed, :strict] then FFI.Agstrictdirected
-                    when [:undirected, :strict] then FFI.Agstrictundirected
+                    when [:directed, :normal] then LibCGraph.Agdirected
+                    when [:undirected, :normal] then LibCGraph.Agundirected
+                    when [:directed, :strict] then LibCGraph.Agstrictdirected
+                    when [:undirected, :strict] then LibCGraph.Agstrictundirected
                     else
                       raise ArgumentError, "invalid graph type #{[type, strictness]}"
                     end
 
-        graph = new(FFI.agopen(name, ag_type, ::FFI::Pointer::NULL))
+        graph = new(LibCGraph.agopen(name, ag_type, FFI::Pointer::NULL))
 
         if block_given?
           yield graph
@@ -248,7 +253,7 @@ module GV
         else
           io.read
         end
-        new FFI.agmemread(data)
+        new LibCGraph.agmemread(data)
       end
     end
 
@@ -266,9 +271,9 @@ module GV
     # @param layout [String] the layout to use, e.g. 'dot' or 'neato' etc.
     # @return [nil]
     def save(filename, format = 'png', layout = 'dot')
-      FFI.gvLayout(@@gvc, ptr, layout.to_s)
-      FFI.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
-      FFI.gvFreeLayout(@@gvc, ptr)
+      LibGVC.gvLayout(@@gvc, ptr, layout.to_s)
+      LibGVC.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
+      LibGVC.gvFreeLayout(@@gvc, ptr)
 
       nil
     end
@@ -278,19 +283,19 @@ module GV
     # @param layout [String] the layout to use, e.g. 'dot' or 'neato' etc.
     # @return [String] the rendered graph in the given format
     def render(format = 'png', layout = 'dot')
-      FFI.gvLayout(@@gvc, ptr, layout.to_s)
+      LibGVC.gvLayout(@@gvc, ptr, layout.to_s)
 
-      data_ptr = ::FFI::MemoryPointer.new(:pointer, 1)
-      len_ptr = ::FFI::MemoryPointer.new(:int, 1)
+      data_ptr = FFI::MemoryPointer.new(:pointer, 1)
+      len_ptr = FFI::MemoryPointer.new(:int, 1)
 
-      FFI.gvRenderData(@@gvc, ptr, format.to_s, data_ptr, len_ptr);
+      LibGVC.gvRenderData(@@gvc, ptr, format.to_s, data_ptr, len_ptr);
       len = len_ptr.read_uint
       data_ptr = data_ptr.read_pointer
       
       data = data_ptr.read_string len
 
-      FFI.gvFreeRenderData(data_ptr)
-      FFI.gvFreeLayout(@@gvc, ptr)
+      LibGVC.gvFreeRenderData(data_ptr)
+      LibGVC.gvFreeLayout(@@gvc, ptr)
 
       data
     end
