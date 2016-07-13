@@ -25,8 +25,7 @@ Or install it yourself as:
 require 'gv'
 
 graph = GV::Graph.open 'g'
-graph.edge 'e', graph.node('A'), graph.node('B', shape: 'polygon')
-
+graph.edge 'e', graph.node('A'), graph.node('B', shape: 'polygon', label: graph.html('<b>bold</b>'))
 # render to string
 graph.render 'png'
 
