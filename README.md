@@ -1,4 +1,7 @@
-# GV [![Build Status](https://travis-ci.org/furunkel/gv.svg?branch=master)](https://travis-ci.org/furunkel/gv)
+[![Yard Docs](http://img.shields.io/badge/yard-docs-blue.svg)](http://rubydoc.info/github/furunkel/gv/master/frames)
+[![Build Status](https://travis-ci.org/furunkel/gv.svg?branch=master)](https://travis-ci.org/furunkel/gv)
+
+# GV
 
 Ruby bindings for libgvc (Graphviz) using FFI.
 
@@ -34,7 +37,7 @@ graph.write 'result.png'
 ```
 
 #### Result 
-![Result](https://github.com/furunkel/gv/blob/master/spec/render.png)
+![Result](https://raw.githubusercontent.com/furunkel/gv/master/spec/render.png)
   
 ### Load existing graph from `.dot` file:
 ```ruby

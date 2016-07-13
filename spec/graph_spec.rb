@@ -15,7 +15,7 @@ describe Graph do
     end
 
     it "takes a block" do
-      graph = Graph.open 'test' do |g|
+      Graph.open 'test' do |g|
         g.directed?.must_equal true
         g.strict?.must_equal false
       end
@@ -24,8 +24,8 @@ describe Graph do
 
   describe :load do
     it "loads graph from file" do
-      f = lambda do |f|
-        graph = Graph.load f
+      f = lambda do |filename|
+        graph = Graph.load filename
         graph.directed?.must_equal true
         graph.strict?.must_equal false
         graph.name.must_equal 'g'
@@ -92,12 +92,12 @@ describe Graph do
     end
   end
 
-  describe :write do
+  describe :save do
     it "renders the graph to the given filename" do
       graph = Graph.open 'test'
       graph.edge 'e', graph.node('A'), graph.node('B')
       filename = File.join Dir.tmpdir, Dir::Tmpname.make_tmpname(['gv_test', '.png'], nil)
-      graph.write filename
+      graph.save filename
       File.file?(filename).must_equal true 
       File.unlink filename
     end

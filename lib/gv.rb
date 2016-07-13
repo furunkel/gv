@@ -57,12 +57,18 @@ module GV
     attach_function :agisdirected, [AGraph.by_ref], :int
     attach_function :agisstrict, [AGraph.by_ref], :int
   end
+  private_constant :FFI
 
   class Component
+    # @!visibility private
     @@gvc = FFI.gvContext()
 
+    # @return [Graph, SubGraph] the graph this component belongs to
     attr_reader :graph
 
+    # Creates an HTML label
+    # @param string [String] the HTML to parse
+    # @return [Object] a HTML label
     def html(string)
       ptr = FFI.agstrdup_html(graph.ptr, string)
       string = ptr.read_string
@@ -81,14 +87,23 @@ module GV
 
     alias :eql? :== 
 
+    # @return [String] the component's name
     def name
       FFI.agnameof ptr
     end
 
+    # Sets an attribute
+    # @param attr [Symbol, String] attribute name
+    # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
+    # @param value [Object] attribute value
     def []=(attr, value)
       FFI.agsafeset(ptr, attr.to_s, value.to_s, "")
     end
 
+    # Retrieves the value of an attribute
+    # @param attr [Symbol, String] attribute name
+    # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
+    # @return [Object] the attribute value
     def [](attr)
       FFI.agget(ptr, attr.to_s)
     end
@@ -116,10 +131,12 @@ module GV
       @ptr = FFI.agedge(graph.ptr, tail.ptr, head.ptr, name, 1)
     end
 
+    # @return [Node] the head node of the edge
     def head
       Node.new @graph, FFI.aghead(ptr)
     end
 
+    # @return [Node] the tail node of the edge
     def tail
       Node.new @graph, FFI.agtail(ptr)
     end
@@ -127,14 +144,34 @@ module GV
 
   class BaseGraph < Component
 
+    # Creates a new node
+    # @param name [String] the name (identifier) of the node
+    # @param attrs [Hash{String, Symbol => Object}] the attributes 
+    # to associate with this node
+    # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
+    # @return [Node] the newly created node
     def node(name, attrs = {})
       component Node, [name], attrs
     end
 
+    # Creates a new edge
+    # @param name [String] the name (identifier) of the edge
+    # @param tail [Node] the edge's tail node
+    # @param head [Node] the edge's head node
+    # @param attrs [Hash{String, Symbol => Object}] the attributes
+    # to associate with this edge
+    # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
+    # @return [Edge] the newly created edge
     def edge(name, tail, head, attrs = {})
       component Edge, [name, tail, head], attrs
     end
 
+    # Creates a new sub-graph
+    # @param name [String] the name (identifier) of the sub-graph
+    # @param attrs [Hash{String, Symbol => Object}] the attributes
+    # to associate with this sub-graph
+    # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
+    # @return [SubGraph] the newly created sub-graph
     def sub_graph(name, attrs = {})
       graph = component SubGraph, [name], attrs
       yield graph if block_given?
@@ -142,10 +179,12 @@ module GV
       graph
     end
 
+    # @return whether this graph is directed
     def directed?
       FFI.agisdirected(ptr) == 1
     end
 
+    # @return whether this graph is strict
     def strict?
       FFI.agisstrict(ptr) == 1
     end
@@ -174,14 +213,21 @@ module GV
 
     class << self
       private :new
-      def open(name, type = :directed, strict = :normal)
-        ag_type = case [type, strict]
+
+      # Creates a new graph
+      # @param type [:directed, :undirected] the graphs type
+      # @param strictness [:strict, :normal] the graphs strict type
+      # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
+      # @yieldparam graph [Graph] the newly created graph
+      # @return [Graph] the newly created graph
+      def open(name, type = :directed, strictness = :normal)
+        ag_type = case [type, strictness]
                     when [:directed, :normal] then FFI.Agdirected
                     when [:undirected, :normal] then FFI.Agundirected
                     when [:directed, :strict] then FFI.Agstrictdirected
                     when [:undirected, :strict] then FFI.Agstrictundirected
                     else
-                      raise ArgumentError, "invalid graph type #{[type, strict]}"
+                      raise ArgumentError, "invalid graph type #{[type, strictness]}"
                     end
 
         graph = new(FFI.agopen(name, ag_type, ::FFI::Pointer::NULL))
@@ -193,6 +239,9 @@ module GV
         graph
       end
 
+      # Loads a graph from a string of file
+      # @param io [IO, String] the resource to load from
+      # @return the newly loaded graph
       def load(io)
         data = if io.is_a? String
           io
@@ -211,12 +260,23 @@ module GV
       self
     end
 
-    def write(filename, format = 'png', layout = 'dot')
+    # Renders the graph to an images and saves the result to a file
+    # @param filename [String] the filename
+    # @param format [String] the image format to use, e.g. 'svg', 'pdf' etc.
+    # @param layout [String] the layout to use, e.g. 'dot' or 'neato' etc.
+    # @return [nil]
+    def save(filename, format = 'png', layout = 'dot')
       FFI.gvLayout(@@gvc, ptr, layout.to_s)
       FFI.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
       FFI.gvFreeLayout(@@gvc, ptr)
+
+      nil
     end
 
+    # Renders the graph to an image and returns the result as a string
+    # @param format [String] the image format to use, e.g. 'svg', 'pdf' etc.
+    # @param layout [String] the layout to use, e.g. 'dot' or 'neato' etc.
+    # @return [String] the rendered graph in the given format
     def render(format = 'png', layout = 'dot')
       FFI.gvLayout(@@gvc, ptr, layout.to_s)
 
