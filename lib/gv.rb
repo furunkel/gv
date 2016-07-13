@@ -6,7 +6,7 @@ module GV
   module FFI
     extend ::FFI::Library
 
-    ffi_lib 'gvc', 'cgraph', ::FFI::Library::LIBC
+    ffi_lib 'gvc', 'cgraph'
 
     class AGraph < ::FFI::ManagedStruct
       # dummy layout, only ever used by reference
@@ -28,13 +28,7 @@ module GV
 
     attach_function :gvRenderFilename, [:gvc, AGraph.by_ref, :string, :string], :int
     attach_function :gvRenderData, [:gvc, AGraph.by_ref, :string, :pointer, :pointer], :int
-
-    begin
-      attach_function :gvFreeRenderData, [:pointer], :void
-    rescue ::FFI::NotFoundError
-      # For backward compatibility
-      attach_function :gvFreeRenderData, :free, [:pointer], :void
-    end
+    attach_function :gvFreeRenderData, [:pointer], :void
 
     attach_function :agmemread, [:string], AGraph.by_ref
     attach_function :agopen, [:string, :long, :pointer], AGraph.by_ref
@@ -293,7 +287,7 @@ module GV
       len = len_ptr.read_uint
       data_ptr = data_ptr.read_pointer
       
-      data = data_ptr.read_string_length len
+      data = data_ptr.read_string len
 
       FFI.gvFreeRenderData(data_ptr)
       FFI.gvFreeLayout(@@gvc, ptr)
