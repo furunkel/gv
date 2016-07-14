@@ -1,3 +1,4 @@
+[![Gem Version](https://badge.fury.io/rb/gv.svg)](https://badge.fury.io/rb/gv)
 [![Yard Docs](http://img.shields.io/badge/yard-docs-blue.svg)](http://rubydoc.info/github/furunkel/gv/master/frames)
 [![Build Status](https://travis-ci.org/furunkel/gv.svg?branch=master)](https://travis-ci.org/furunkel/gv)
 
