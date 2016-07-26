@@ -49,6 +49,7 @@ graph = GV::Graph.load File.open('g.dot')
 # render graph
 graph.render
 ```
+See the [documentation](http://www.rubydoc.info/gems/gv) for details.
 
 ## Contributing
 
