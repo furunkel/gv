@@ -1,10 +1,10 @@
 [![Gem Version](https://badge.fury.io/rb/gv.svg)](https://badge.fury.io/rb/gv)
-[![Yard Docs](http://img.shields.io/badge/yard-docs-blue.svg)](http://www.rubydoc.info/gems/gv)
+[![Inline docs](http://inch-ci.org/github/furunkel/gv.svg?branch=master)](http://inch-ci.org/github/furunkel/gv)
 [![Build Status](https://travis-ci.org/furunkel/gv.svg?branch=master)](https://travis-ci.org/furunkel/gv)
 
-# GV
+# Graphviz FFI
 
-Ruby bindings for libgvc (Graphviz) using FFI.
+Ruby bindings for libcgraph and libgvc (Graphviz) using FFI.
 
 ## Installation
 
