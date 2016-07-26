@@ -2,22 +2,19 @@ require 'gv/version'
 require 'ffi'
 
 module GV
-
-  module LibCGraph
+  module Libcgraph
     extend FFI::Library
 
     ffi_lib 'cgraph'
 
     class AGraph < FFI::AutoPointer
       def self.release(ptr)
-        LibCGraph.agclose(ptr) unless ptr.null?
+        Libcgraph.agclose(ptr) unless ptr.null?
       end
     end
 
-
     typedef :pointer, :ag_node
     typedef :pointer, :ag_edge
-
 
     attach_function :agmemread, [:string], AGraph
     attach_function :agopen, [:string, :long, :pointer], AGraph
@@ -46,27 +43,28 @@ module GV
     attach_function :agisdirected, [AGraph], :int
     attach_function :agisstrict, [AGraph], :int
   end
-  private_constant :LibCGraph
+  private_constant :Libcgraph
 
-  module LibGVC
+  module Libgvc
     extend FFI::Library
     ffi_lib 'gvc'
 
     typedef :pointer, :gvc
 
     attach_function :gvContext, [], :pointer
-    attach_function :gvFreeLayout, [:gvc, LibCGraph::AGraph], :int
-    attach_function :gvLayout, [:gvc, LibCGraph::AGraph, :string], :int
+    attach_function :gvFreeLayout, [:gvc, Libcgraph::AGraph], :int
+    attach_function :gvLayout, [:gvc, Libcgraph::AGraph, :string], :int
 
-    attach_function :gvRenderFilename, [:gvc, LibCGraph::AGraph, :string, :string], :int
-    attach_function :gvRenderData, [:gvc, LibCGraph::AGraph, :string, :pointer, :pointer], :int
+    attach_function :gvRenderFilename, [:gvc, Libcgraph::AGraph, :string, :string], :int
+    attach_function :gvRenderData, [:gvc, Libcgraph::AGraph, :string, :pointer, :pointer], :int
     attach_function :gvFreeRenderData, [:pointer], :void
   end
-  private_constant :LibGVC
+  private_constant :Libgvc
 
+  # Common super-class for edges, nodes and graphs
   class Component
     # @!visibility private
-    @@gvc = LibGVC.gvContext()
+    @@gvc = Libgvc.gvContext
 
     # @return [Graph, SubGraph] the graph this component belongs to
     attr_reader :graph
@@ -75,9 +73,9 @@ module GV
     # @param string [String] the HTML to parse
     # @return [Object] a HTML label
     def html(string)
-      ptr = LibCGraph.agstrdup_html(graph.ptr, string)
+      ptr = Libcgraph.agstrdup_html(graph.ptr, string)
       string = ptr.read_string
-      LibCGraph.agstrfree graph.ptr, ptr
+      Libcgraph.agstrfree graph.ptr, ptr
 
       string
     end
@@ -90,11 +88,11 @@ module GV
       other.is_a?(Component) && ptr == other.ptr
     end
 
-    alias :eql? :== 
+    alias eql? ==
 
     # @return [String] the component's name
     def name
-      LibCGraph.agnameof ptr
+      Libcgraph.agnameof ptr
     end
 
     # Sets an attribute
@@ -102,7 +100,7 @@ module GV
     # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
     # @param value [Object] attribute value
     def []=(attr, value)
-      LibCGraph.agsafeset(ptr, attr.to_s, value.to_s, "")
+      Libcgraph.agsafeset(ptr, attr.to_s, value.to_s, "")
     end
 
     # Retrieves the value of an attribute
@@ -110,43 +108,47 @@ module GV
     # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
     # @return [Object] the attribute value
     def [](attr)
-      LibCGraph.agget(ptr, attr.to_s)
+      Libcgraph.agget(ptr, attr.to_s)
     end
 
     protected
     attr_reader :ptr
   end
 
+  # Represents a node in the graph
   class Node < Component
     def initialize(graph, name_or_ptr)
       @graph = graph
-      case name_or_ptr
-      when String
-        @ptr = LibCGraph.agnode(graph.ptr, name_or_ptr, 1)
-      else
-        @ptr = name_or_ptr
-      end
+      @ptr =
+        case name_or_ptr
+        when String
+          Libcgraph.agnode(graph.ptr, name_or_ptr, 1)
+        else
+          name_or_ptr
+        end
     end
   end
 
+  # Represents a connection between nodes
   class Edge < Component
     def initialize(graph, name, tail, head)
       @graph = graph
 
-      @ptr = LibCGraph.agedge(graph.ptr, tail.ptr, head.ptr, name, 1)
+      @ptr = Libcgraph.agedge(graph.ptr, tail.ptr, head.ptr, name, 1)
     end
 
     # @return [Node] the head node of the edge
     def head
-      Node.new @graph, LibCGraph.aghead(ptr)
+      Node.new @graph, Libcgraph.aghead(ptr)
     end
 
     # @return [Node] the tail node of the edge
     def tail
-      Node.new @graph, LibCGraph.agtail(ptr)
+      Node.new @graph, Libcgraph.agtail(ptr)
     end
   end
 
+  # Common super-class for graphs and sub-graphs
   class BaseGraph < Component
 
     # Creates a new node
@@ -186,15 +188,16 @@ module GV
 
     # @return whether this graph is directed
     def directed?
-      LibCGraph.agisdirected(ptr) == 1
+      Libcgraph.agisdirected(ptr) == 1
     end
 
     # @return whether this graph is strict
     def strict?
-      LibCGraph.agisstrict(ptr) == 1
+      Libcgraph.agisstrict(ptr) == 1
     end
 
     private
+
     def component(klass, args, attrs = {})
       comp = klass.new self, *args
 
@@ -207,13 +210,15 @@ module GV
 
   end
 
+  # Represents a sub-graph
   class SubGraph < BaseGraph
     def initialize(graph, name)
       @graph = graph
-      @ptr = LibCGraph.agsubg(graph.ptr, name, 1)
+      @ptr = Libcgraph.agsubg(graph.ptr, name, 1)
     end
   end
 
+  # Represents a toplevel graph
   class Graph < BaseGraph
 
     class << self
@@ -227,15 +232,19 @@ module GV
       # @return [Graph] the newly created graph
       def open(name, type = :directed, strictness = :normal)
         ag_type = case [type, strictness]
-                    when [:directed, :normal] then LibCGraph.Agdirected
-                    when [:undirected, :normal] then LibCGraph.Agundirected
-                    when [:directed, :strict] then LibCGraph.Agstrictdirected
-                    when [:undirected, :strict] then LibCGraph.Agstrictundirected
-                    else
-                      raise ArgumentError, "invalid graph type #{[type, strictness]}"
-                    end
+                  when [:directed, :normal] then
+                    Libcgraph.Agdirected
+                  when [:undirected, :normal] then
+                    Libcgraph.Agundirected
+                  when [:directed, :strict] then
+                    Libcgraph.Agstrictdirected
+                  when [:undirected, :strict] then
+                    Libcgraph.Agstrictundirected
+                  else
+                    raise ArgumentError, "invalid graph type #{[type, strictness]}"
+                  end
 
-        graph = new(LibCGraph.agopen(name, ag_type, FFI::Pointer::NULL))
+        graph = new(Libcgraph.agopen(name, ag_type, FFI::Pointer::NULL))
 
         if block_given?
           yield graph
@@ -249,11 +258,11 @@ module GV
       # @return the newly loaded graph
       def load(io)
         data = if io.is_a? String
-          io
-        else
-          io.read
-        end
-        new LibCGraph.agmemread(data)
+                 io
+               else
+                 io.read
+               end
+        new Libcgraph.agmemread(data)
       end
     end
 
@@ -271,9 +280,9 @@ module GV
     # @param layout [String] the layout to use, e.g. 'dot' or 'neato' etc.
     # @return [nil]
     def save(filename, format = 'png', layout = 'dot')
-      LibGVC.gvLayout(@@gvc, ptr, layout.to_s)
-      LibGVC.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
-      LibGVC.gvFreeLayout(@@gvc, ptr)
+      Libgvc.gvLayout(@@gvc, ptr, layout.to_s)
+      Libgvc.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
+      Libgvc.gvFreeLayout(@@gvc, ptr)
 
       nil
     end
@@ -283,19 +292,19 @@ module GV
     # @param layout [String] the layout to use, e.g. 'dot' or 'neato' etc.
     # @return [String] the rendered graph in the given format
     def render(format = 'png', layout = 'dot')
-      LibGVC.gvLayout(@@gvc, ptr, layout.to_s)
+      Libgvc.gvLayout(@@gvc, ptr, layout.to_s)
 
       data_ptr = FFI::MemoryPointer.new(:pointer, 1)
       len_ptr = FFI::MemoryPointer.new(:int, 1)
 
-      LibGVC.gvRenderData(@@gvc, ptr, format.to_s, data_ptr, len_ptr);
+      Libgvc.gvRenderData(@@gvc, ptr, format.to_s, data_ptr, len_ptr)
       len = len_ptr.read_uint
       data_ptr = data_ptr.read_pointer
-      
+
       data = data_ptr.read_string len
 
-      LibGVC.gvFreeRenderData(data_ptr)
-      LibGVC.gvFreeLayout(@@gvc, ptr)
+      Libgvc.gvFreeRenderData(data_ptr)
+      Libgvc.gvFreeLayout(@@gvc, ptr)
 
       data
     end

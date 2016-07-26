@@ -4,7 +4,7 @@ include GV
 
 describe Graph do
   describe :open do
-    it "creates a new graph" do
+    it 'creates a new graph' do
       graph = Graph.open 'test'
       graph.directed?.must_equal true
       graph.strict?.must_equal false
@@ -14,7 +14,7 @@ describe Graph do
       graph.directed?.must_equal true
     end
 
-    it "takes a block" do
+    it 'takes a block' do
       Graph.open 'test' do |g|
         g.directed?.must_equal true
         g.strict?.must_equal false
@@ -23,14 +23,14 @@ describe Graph do
   end
 
   describe :load do
-    it "loads graph from file" do
+    it 'loads graph from file' do
       f = lambda do |filename|
         graph = Graph.load filename
         graph.directed?.must_equal true
         graph.strict?.must_equal false
         graph.name.must_equal 'g'
       end
- 
+
       filename = File.join(__dir__, 'simple_graph.dot')
       file = File.open filename
       f.call file
@@ -45,11 +45,11 @@ describe Graph do
       @graph = Graph.open 'test'
     end
 
-    it "creates a new node" do
+    it 'creates a new node' do
       @graph.node('test').must_be_kind_of Node
     end
 
-    it "sets given attributes" do
+    it 'sets given attributes' do
       @graph.node('test', color: 'green')[:color].must_equal 'green'
     end
   end
@@ -59,22 +59,21 @@ describe Graph do
       @graph = Graph.open 'test'
     end
 
-    it "creates a new sub graph" do
+    it 'creates a new sub graph' do
       @graph.sub_graph('test').must_be_kind_of SubGraph
     end
 
-    it "sets given attributes" do
+    it 'sets given attributes' do
       @graph.sub_graph('test', color: 'green')[:color].must_equal 'green'
     end
 
-    it "takes a block" do
+    it 'takes a block' do
       graph = @graph.sub_graph('test') do |g|
         g[:color] = 'green'
       end
       graph[:color].must_equal 'green'
     end
   end
-
 
   describe :edge do
     before do
@@ -83,20 +82,20 @@ describe Graph do
       @tail = @graph.node 'tail'
     end
 
-    it "creates a new edge" do
+    it 'creates a new edge' do
       @graph.edge('test', @tail, @head).must_be_kind_of Edge
     end
 
-    it "sets given attributes" do
+    it 'sets given attributes' do
       @graph.edge('test', @tail, @head, color: 'green')[:color].must_equal 'green'
     end
   end
 
   describe :save do
-    it "renders the graph to the given filename" do
+    it 'renders the graph to the given filename' do
       graph = Graph.open 'test'
       graph.edge 'e', graph.node('A'), graph.node('B')
-      filename = File.join Dir.tmpdir, Dir::Tmpname.make_tmpname(['gv_test', '.png'], nil)
+      filename = File.join Dir.tmpdir, Dir::Tmpname.make_tmpname(%w(gv_test .png), nil)
       graph.save filename
       File.file?(filename).must_equal true 
       File.unlink filename
@@ -104,9 +103,12 @@ describe Graph do
   end
 
   describe :render do
-    it "renders the graph to a string" do
+    it 'renders the graph to a string' do
       graph = Graph.open 'test'
-      graph.edge 'e', graph.node('A'), graph.node('B', shape: 'polygon', label: graph.html('<b>bold</b>'))
+      graph.edge 'e', graph.node('A'),
+                 graph.node('B', shape: 'polygon',
+                                 label: graph.html('<b>bold</b>'))
+
       data = graph.render
 
       graph = nil
