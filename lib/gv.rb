@@ -17,7 +17,7 @@ module GV
     typedef :pointer, :ag_edge
 
     attach_function :agmemread, [:string], AGraph
-    attach_function :agopen, [:string, :long, :pointer], AGraph
+    attach_function :agopen, %i[string long pointer], AGraph
     attach_function :agclose, [AGraph], :int
 
     attach_variable :Agundirected, :long
@@ -34,9 +34,9 @@ module GV
 
     attach_function :agtail, [:ag_edge], :ag_node
     attach_function :aghead, [:ag_edge], :ag_node
-    attach_function :agget, [:pointer, :string], :string
+    attach_function :agget, %i[pointer string], :string
 
-    attach_function :agsafeset, [:pointer, :string, :string, :string], :pointer
+    attach_function :agsafeset, %i[pointer string string string], :pointer
     attach_function :agstrdup_html, [AGraph, :string], :pointer
     attach_function :agstrfree, [AGraph, :pointer], :int
 
@@ -100,7 +100,7 @@ module GV
     # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
     # @param value [Object] attribute value
     def []=(attr, value)
-      Libcgraph.agsafeset(ptr, attr.to_s, value.to_s, "")
+      Libcgraph.agsafeset(ptr, attr.to_s, value.to_s, '')
     end
 
     # Retrieves the value of an attribute
@@ -112,6 +112,7 @@ module GV
     end
 
     protected
+
     attr_reader :ptr
   end
 
@@ -150,10 +151,9 @@ module GV
 
   # Common super-class for graphs and sub-graphs
   class BaseGraph < Component
-
     # Creates a new node
     # @param name [String] the name (identifier) of the node
-    # @param attrs [Hash{String, Symbol => Object}] the attributes 
+    # @param attrs [Hash{String, Symbol => Object}] the attributes
     # to associate with this node
     # @see http://www.graphviz.org/doc/info/attrs.html Node, Edge and Graph Attributes
     # @return [Node] the newly created node
@@ -207,7 +207,6 @@ module GV
 
       comp
     end
-
   end
 
   # Represents a sub-graph
@@ -220,7 +219,6 @@ module GV
 
   # Represents a toplevel graph
   class Graph < BaseGraph
-
     class << self
       private :new
 
@@ -232,13 +230,13 @@ module GV
       # @return [Graph] the newly created graph
       def open(name, type = :directed, strictness = :normal)
         ag_type = case [type, strictness]
-                  when [:directed, :normal] then
+                  when %i[directed normal]
                     Libcgraph.Agdirected
-                  when [:undirected, :normal] then
+                  when %i[undirected normal]
                     Libcgraph.Agundirected
-                  when [:directed, :strict] then
+                  when %i[directed strict]
                     Libcgraph.Agstrictdirected
-                  when [:undirected, :strict] then
+                  when %i[undirected strict]
                     Libcgraph.Agstrictundirected
                   else
                     raise ArgumentError, "invalid graph type #{[type, strictness]}"
@@ -246,9 +244,7 @@ module GV
 
         graph = new(Libcgraph.agopen(name, ag_type, FFI::Pointer::NULL))
 
-        if block_given?
-          yield graph
-        end
+        yield graph if block_given?
 
         graph
       end
@@ -281,7 +277,7 @@ module GV
     # @return [nil]
     def save(filename, format = 'png', layout = 'dot')
       Libgvc.gvLayout(@@gvc, ptr, layout.to_s)
-      Libgvc.gvRenderFilename(@@gvc, ptr, format.to_s, filename);
+      Libgvc.gvRenderFilename(@@gvc, ptr, format.to_s, filename)
       Libgvc.gvFreeLayout(@@gvc, ptr)
 
       nil

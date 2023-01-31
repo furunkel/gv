@@ -1,4 +1,5 @@
 require_relative 'spec_helper'
+require 'tmpdir'
 
 include GV
 
@@ -6,18 +7,18 @@ describe Graph do
   describe :open do
     it 'creates a new graph' do
       graph = Graph.open 'test'
-      graph.directed?.must_equal true
-      graph.strict?.must_equal false
+      assert graph.directed?
+      refute graph.strict?
 
       graph = Graph.open 'test', :directed, :strict
-      graph.strict?.must_equal true
-      graph.directed?.must_equal true
+      assert graph.strict?
+      assert graph.directed?
     end
 
     it 'takes a block' do
       Graph.open 'test' do |g|
-        g.directed?.must_equal true
-        g.strict?.must_equal false
+        assert g.directed?
+        refute g.strict?
       end
     end
   end
@@ -26,9 +27,9 @@ describe Graph do
     it 'loads graph from file' do
       f = lambda do |filename|
         graph = Graph.load filename
-        graph.directed?.must_equal true
-        graph.strict?.must_equal false
-        graph.name.must_equal 'g'
+        assert graph.directed?
+        refute graph.strict?
+        assert_equal 'g', graph.name
       end
 
       filename = File.join(__dir__, 'simple_graph.dot')
@@ -46,11 +47,11 @@ describe Graph do
     end
 
     it 'creates a new node' do
-      @graph.node('test').must_be_kind_of Node
+      assert_kind_of Node, @graph.node('test')
     end
 
     it 'sets given attributes' do
-      @graph.node('test', color: 'green')[:color].must_equal 'green'
+      assert_equal 'green', @graph.node('test', color: 'green')[:color]
     end
   end
 
@@ -60,18 +61,18 @@ describe Graph do
     end
 
     it 'creates a new sub graph' do
-      @graph.sub_graph('test').must_be_kind_of SubGraph
+      assert_kind_of SubGraph, @graph.sub_graph('test')
     end
 
     it 'sets given attributes' do
-      @graph.sub_graph('test', color: 'green')[:color].must_equal 'green'
+      assert_equal 'green', @graph.sub_graph('test', color: 'green')[:color]
     end
 
     it 'takes a block' do
       graph = @graph.sub_graph('test') do |g|
         g[:color] = 'green'
       end
-      graph[:color].must_equal 'green'
+      assert_equal 'green', graph[:color]
     end
   end
 
@@ -83,11 +84,11 @@ describe Graph do
     end
 
     it 'creates a new edge' do
-      @graph.edge('test', @tail, @head).must_be_kind_of Edge
+      assert_kind_of Edge, @graph.edge('test', @tail, @head)
     end
 
     it 'sets given attributes' do
-      @graph.edge('test', @tail, @head, color: 'green')[:color].must_equal 'green'
+      assert_equal 'green', @graph.edge('test', @tail, @head, color: 'green')[:color]
     end
   end
 
@@ -95,10 +96,10 @@ describe Graph do
     it 'renders the graph to the given filename' do
       graph = Graph.open 'test'
       graph.edge 'e', graph.node('A'), graph.node('B')
-      filename = File.join Dir.tmpdir, Dir::Tmpname.make_tmpname(%w(gv_test .png), nil)
-      graph.save filename
-      File.file?(filename).must_equal true 
-      File.unlink filename
+      Tempfile.create(%w(gv_test .png)) do |file|
+        graph.save file.path
+        assert_equal true, File.file?(file.path)
+      end
     end
   end
 
@@ -113,7 +114,7 @@ describe Graph do
 
       graph = nil
       GC.start
-      data.must_be_kind_of String
+      assert_kind_of String, data
 
       File.write 'spec/render.png', data
     end
@@ -129,17 +130,17 @@ describe Edge do
   end
 
   it 'gives access to head and tail' do
-    @edge.head.must_equal @head
-    @edge.tail.must_equal @tail
+    assert_equal @head, @edge.head
+    assert_equal @tail, @edge.tail
   end
 
   it 'gives access to name' do
-    @edge.name.must_equal 'test'
+    assert_equal 'test', @edge.name
   end
 
   it 'gives access to attributes' do
-    @edge[:color].must_equal nil
+    assert_nil @edge[:color]
     @edge[:color] = 'green'
-    @edge[:color].must_equal 'green'
+    assert_equal 'green', @edge[:color]
   end
 end
